@@ -1,6 +1,5 @@
 import * as express from 'express';
 import * as R from 'ramda';
-import * as matcher from 'matcher';
 import axios from 'axios';
 import { Server } from 'http';
 import * as Behavior from './Helpers/Behavior';
