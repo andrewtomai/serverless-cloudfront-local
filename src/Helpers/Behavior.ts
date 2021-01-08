@@ -1,5 +1,6 @@
 import * as express from 'express';
 import { Method } from 'axios';
+import * as Cache from './Cache';
 
 export type Destination = {
     url: string;
@@ -18,6 +19,6 @@ export interface ProxyRequestParameters {
 export const requestParameters = (behavior: Destination, request: express.Request): ProxyRequestParameters => {
     const method = request.method as Method;
     const url = behavior.url + request.path;
-    const key = `${method}#${url}`;
+    const key = Cache.createKey(request.path, method);
     return { method, url, key, ttl: behavior.ttl };
 };

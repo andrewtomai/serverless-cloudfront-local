@@ -45,4 +45,33 @@ describe('Scenario: Using cache helpers', () => {
             });
         });
     });
+
+    describe('Given: a cache', () => {
+        const cache = ({
+            '/hello#GET': {},
+            '/world.jpg#POST': {},
+            '/world.jpg#HEAD': {},
+        } as unknown) as Cache.Cache;
+        describe('When: I find the cache keys matching a specific path', () => {
+            const paths = ['/world.jpg'];
+            it('Then I get back cache keys with only the specific path', () => {
+                const actual = Cache.matchingCacheKeys(cache, paths);
+                expect(actual).to.deep.equal(['/world.jpg#POST', '/world.jpg#HEAD']);
+            });
+        });
+        describe('When: I find the cache keys matching wildcarded path', () => {
+            const paths = ['/*'];
+            it('Then I get back cache keys with only the specific path', () => {
+                const actual = Cache.matchingCacheKeys(cache, paths);
+                expect(actual).to.deep.equal(['/hello#GET', '/world.jpg#POST', '/world.jpg#HEAD']);
+            });
+        });
+        describe('When: I find the cache keys matching a two specific paths', () => {
+            const paths = ['/hello', '/world.jpg'];
+            it('Then I get back cache keys with only the specific path', () => {
+                const actual = Cache.matchingCacheKeys(cache, paths);
+                expect(actual).to.deep.equal(['/hello#GET', '/world.jpg#POST', '/world.jpg#HEAD']);
+            });
+        });
+    });
 });

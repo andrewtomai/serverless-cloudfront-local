@@ -13,7 +13,7 @@ describe('Scenario: Using behavior helpers', () => {
 
             it('And I get back the request url', () => expect(url).to.equal('urlpath'));
             it('And I get back the request ttl', () => expect(ttl).to.equal(0));
-            it('And I get back the request key', () => expect(key).to.equal('get#urlpath'));
+            it('And I get back the request key', () => expect(key).to.equal('path#get'));
         });
     });
 });

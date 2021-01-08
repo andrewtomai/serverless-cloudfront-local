@@ -1,5 +1,6 @@
 import * as express from 'express';
 import * as R from 'ramda';
+import * as matcher from 'matcher';
 import axios from 'axios';
 import { Server } from 'http';
 import * as Behavior from './Helpers/Behavior';
@@ -39,6 +40,11 @@ class CdnServer {
                 res.send(err);
             }
         });
+    };
+
+    invalidate = (...paths: string[]): void => {
+        const matchingCacheKeys = Cache.matchingCacheKeys(this.cache, paths);
+        this.cache = R.omit(matchingCacheKeys, this.cache);
     };
 
     stop = async (): Promise<void> => {

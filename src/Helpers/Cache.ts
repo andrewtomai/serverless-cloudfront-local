@@ -1,3 +1,5 @@
+import * as matcher from 'matcher';
+import * as R from 'ramda';
 import { AxiosResponse } from 'axios';
 
 type CacheValue = {
@@ -12,6 +14,9 @@ export interface MemoizedValue {
     cache: Cache;
     updated: boolean;
 }
+
+export const createKey = (path: string, method: string): string => `${path}#${method}`;
+const splitKey = (key: string): [string, string] => R.split('#', key) as [string, string];
 
 export const isExpired = (value: CacheValue, ttl: number): boolean => {
     return (Date.now() - value.timeRetrieved) / 1000 > ttl;
@@ -35,4 +40,14 @@ export const memoize = async (
         },
     });
     return { response, cache: updatedCache, updated: true };
+};
+
+const keyMatchesAnyPath = (paths: string[]) => (key: string) => {
+    const pathInKey = R.head(splitKey(key)) ?? '';
+    return R.any((path) => matcher.isMatch(pathInKey, path), paths);
+};
+
+export const matchingCacheKeys = (cache: Cache, paths: string[]): string[] => {
+    const matchingCacheKeys = R.filter(keyMatchesAnyPath(paths), Object.keys(cache));
+    return matchingCacheKeys;
 };
