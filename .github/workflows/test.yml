@@ -44,7 +44,6 @@ jobs:
         uses: actions/setup-node@v2
       # install dependencies and bootstrap monorepo
       - name: Install Dependencies
-        run: yarnl Dependencies
         run: yarn
       - name: Unit tests
         run: yarn test
