@@ -1,0 +1,51 @@
+name: tests
+# Run these on pull requests to master, and pushes to master
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      # checkout the codebase
+      - uses: actions/checkout@v2
+      # cache node modules and other dependencies
+      - name: Cache node modules
+        uses: actions/cache@v2
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-dependencies-${{ hashFiles('yarn.lock') }}
+      # setup the node environment
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v2
+      # install dependencies and bootstrap monorepo
+      - name: Install Dependencies
+        run: yarn
+      - name: Lint the code
+        run: yarn lint
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      # checkout the codebase
+      - uses: actions/checkout@v2
+      # cache node modules and other dependencies
+      - name: Cache node modules
+        uses: actions/cache@v2
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-dependencies-${{ hashFiles('yarn.lock') }}
+      # setup the node environment
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v2
+      # install dependencies and bootstrap monorepo
+      - name: Install Dependencies
+        run: yarnl Dependencies
+        run: yarn
+      - name: Unit tests
+        run: yarn test
+  
