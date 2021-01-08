@@ -2,6 +2,8 @@ dist
 node_modules
 *.js
 *.d.ts
+!.eslintrc.js
+!.prettierrc.js
 
 .serverless
 
