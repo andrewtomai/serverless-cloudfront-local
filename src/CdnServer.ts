@@ -4,6 +4,7 @@ import axios from 'axios';
 import { Server } from 'http';
 import * as Behavior from './Helpers/Behavior';
 import * as Cache from './Helpers/Cache';
+import { stopServer } from './Helpers/Server';
 
 interface Configuration {
     behaviors: Behavior.Behaviors;
@@ -47,7 +48,7 @@ class CdnServer {
     };
 
     stop = async (): Promise<void> => {
-        return new Promise((r) => this.server.close(() => r()));
+        return stopServer(this.server);
     };
 }
 

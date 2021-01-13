@@ -28,14 +28,6 @@ describe('Scenario: I can use a server as a cdn like cloudfront', () => {
             await cdnServer.stop();
         });
 
-        describe('When I make a request to the hello world server', () => {
-            it('Then I get back the hello world response', async () => {
-                const response = await axios.get('http://localhost:4000');
-                expect(response).to.have.property('status', 200);
-                expect(response).to.have.property('data', 'hello world');
-            });
-        });
-
         describe('When I make a request to the CDN Server', () => {
             let response;
             before('make the request', async () => {
@@ -71,11 +63,11 @@ describe('Scenario: I can use a server as a cdn like cloudfront', () => {
                 await helloWorldServer.stop();
                 response = await axios.get('http://localhost:3000');
             });
-            it('Then my request is forwarded to the hello world server', async () => {
+            it('Then my request is not forwarded, and the response is cached', async () => {
                 expect(response).to.have.property('status', 200);
                 expect(response).to.have.property('data', 'hello world');
             });
-            it('And the cache missed', () => {
+            it('And the cache hit', () => {
                 expect(response.headers).to.have.property('x-cache-result', 'hit');
             });
         });
