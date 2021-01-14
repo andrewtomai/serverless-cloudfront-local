@@ -31,47 +31,45 @@ describe('Scenario: I can simulate cloudfront locally', () => {
                     },
                 },
             };
-            let response;
+            let distribution;
             before('create the distribution', async () => {
-                response = cloudfront.createDistribution(configuration);
+                distribution = cloudfront.createDistribution(configuration);
             });
-            it('Then I get back a distribution Id', async () => {
-                expect(response).to.have.property('distributionId');
+            it('Then I get back a Distribution Id', async () => {
+                expect(distribution).to.have.property('distributionId');
             });
-            it('And I can describe my distribution by Id', () => {
-                const description = cloudfront.describeDistribution(response.distributionId);
-                expect(description).to.deep.equal(configuration);
+            it('And I can describe my Distribution by Id', () => {
+                const description = cloudfront.describeDistribution(distribution.distributionId);
+                expect(description).to.deep.include({
+                    distributionId: distribution.distributionId,
+                    configuration,
+                    running: true,
+                });
             });
-        });
-
-        describe('When I make a request to the Cloudfront CDN Server', () => {
-            let response;
-            before('make the request', async () => {
-                response = await axios.get('http://localhost:3000');
-            });
-            it('Then my request is forwarded to the hello world server', async () => {
+            it('And requests to the Distribution are proxied to the hello world server', async () => {
+                const response = await axios.get('http://localhost:3000');
                 expect(response).to.have.property('status', 200);
                 expect(response).to.have.property('data', 'hello world');
-            });
-            it('And the cache missed', () => {
                 expect(response.headers).to.have.property('x-cache-result', 'miss');
             });
-        });
 
-        describe('When I use the aws-sdk to create an invalidation for the path "*"', () => {
-            let invalidationResponse;
-            before('invalidate and request', async () => {
-                invalidationResponse = AWS.createInvalidation(['*']);
-            });
-            it('Then I get back a well formated AWS response', async () => {
+            it('And I can use the aws-sdk to create an invalidation for the path "*"', async () => {
+                const invalidationResponse = AWS.createInvalidation(['*'], { port });
                 expect(invalidationResponse).to.have.property('status', 200);
                 expect(invalidationResponse).to.have.property('data', 'hello world');
             });
-            it('And another request to the CDN misses the cache', async () => {
+
+            it('And the invalidation causes the cache to miss', async () => {
                 const response = await axios.get('http://localhost:3000');
-                expect(invalidationResponse).to.have.property('status', 200);
-                expect(invalidationResponse).to.have.property('data', 'hello world');
+                expect(response).to.have.property('status', 200);
+                expect(response).to.have.property('data', 'hello world');
                 expect(response.headers).to.have.property('x-cache-result', 'miss');
+            });
+
+            it('And I can stop the Distribution', async () => {
+                await cloudfront.stopDistribution(distribution.distributionId);
+                const description = cloudfront.describeDistribution(distribution.distributionId);
+                expect(description).to.have.property('running', false);
             });
         });
     });

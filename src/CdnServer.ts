@@ -6,7 +6,7 @@ import * as Behavior from './Helpers/Behavior';
 import * as Cache from './Helpers/Cache';
 import { stopServer } from './Helpers/Server';
 
-interface Configuration {
+export interface Configuration {
     behaviors: Behavior.Behaviors;
     port?: number;
 }
@@ -15,8 +15,8 @@ class CdnServer {
     private server: Server;
     cache: Cache.Cache;
 
-    constructor(inputConfiguration: Configuration) {
-        const { behaviors, port = 4000 } = inputConfiguration;
+    constructor(config: Configuration) {
+        const { behaviors, port = 4000 } = config;
         this.cache = {};
         const app = express();
         R.forEach(this.proxyBehavior(app), Object.entries(behaviors));
