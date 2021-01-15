@@ -1,4 +1,6 @@
 import * as express from 'express';
+import * as bodyParser from 'body-parser';
+import * as parser from 'fast-xml-parser';
 import * as R from 'ramda';
 import { Server } from 'http';
 import { Chance } from 'chance';
@@ -6,13 +8,8 @@ import CdnServer, { Configuration as CdnConfigration } from './CdnServer';
 import { stopServer } from './Helpers/Server';
 
 interface Configuration {
-    port?: number;
+    port: number;
 }
-
-const generateDistributionId = () => {
-    const chance = Chance();
-    return `E${chance.string({ length: 13, casing: 'upper', alpha: true, numeric: true })}`;
-};
 
 interface Distribution {
     server: CdnServer;
@@ -21,6 +18,55 @@ interface Distribution {
     running: boolean;
 }
 
+interface InvalidateBatchRequestBody {
+    InvalidationBatch: {
+        Paths: {
+            Quantity: number;
+            Items: {
+                Path: string | string[];
+            };
+        };
+        CallerReference: string | number;
+    };
+}
+
+const generateDistributionId = () => {
+    const chance = Chance();
+    return `E${chance.string({ length: 13, casing: 'upper', alpha: true, numeric: true })}`;
+};
+
+const generateInvalidationId = () => {
+    const chance = Chance();
+    return `I${chance.string({ length: 13, casing: 'upper', alpha: true, numeric: true })}`;
+};
+
+const xmlParserMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const parsedBody = parser.parse(req.body.toString());
+    req.body = parsedBody;
+    next();
+};
+
+const createXmlApp = () => {
+    const app = express();
+    app.use(bodyParser.raw({ type: () => true }));
+    app.use(xmlParserMiddleware);
+    return app;
+};
+
+const distributionIdFromPath = (path: string) => R.nth(3, R.split('/', path));
+
+const pathsFromBody = (body: InvalidateBatchRequestBody): string[] => {
+    const paths = body.InvalidationBatch.Paths.Items.Path;
+    if (Array.isArray(paths)) return paths;
+    return [paths];
+};
+
+const xmlResponse = (obj: Record<string, unknown>) => {
+    const j2xParser = new parser.j2xParser({});
+    const xml = j2xParser.parse(obj);
+    return xml;
+};
+
 class Cloudfront {
     private adminServer: Server;
     private distributions: {
@@ -28,11 +74,39 @@ class Cloudfront {
     };
 
     constructor(config: Configuration) {
-        const { port = 4000 } = config;
-        const app = express();
+        const { port } = config;
+        const app = this.createAdminApp();
         this.distributions = {};
         this.adminServer = app.listen(port);
     }
+
+    private createAdminApp = () => {
+        const app = createXmlApp();
+        app.all('*', (req, res) => {
+            const distributionId = distributionIdFromPath(req.path);
+            const body = req.body as InvalidateBatchRequestBody;
+            const paths = pathsFromBody(body);
+            this.invalidateDistribution(distributionId!, paths);
+            const response = {
+                Invalidation: {
+                    CreateTime: Date.now(),
+                    Id: generateInvalidationId(),
+                    InvalidationBatch: {
+                        CallerReference: body.InvalidationBatch.CallerReference,
+                        Paths: body.InvalidationBatch.Paths,
+                    },
+                    Status: 'Completed',
+                },
+            };
+            res.status(201).send(xmlResponse(response));
+        });
+        return app;
+    };
+
+    private invalidateDistribution = (distributionId: string, paths: string[]) => {
+        const distribution = this.describeDistribution(distributionId);
+        distribution?.server.invalidate(...paths);
+    };
 
     createDistribution = (config: CdnConfigration): Distribution => {
         const distributionId = generateDistributionId();
