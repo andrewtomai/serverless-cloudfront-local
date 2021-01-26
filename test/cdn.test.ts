@@ -42,6 +42,27 @@ describe('Scenario: I can use a server as a cdn like cloudfront', () => {
             });
         });
 
+        describe('When I make a request to the CDN server to the "/no-cache" path', () => {
+            let response;
+            before('make the request', async () => {
+                response = await axios.get('http://localhost:3000/no-cache');
+            });
+            it('Then my request is forwarded to the hello world server', () => {
+                expect(response).to.have.property('status', 200);
+                expect(response).to.have.property('data', 'hello world');
+            });
+            it('And the cache missed', () => {
+                expect(response.headers).to.have.property('x-cache-result', 'miss');
+            });
+            it('And the response includes the "cache-control: no-cache" header', () => {
+                expect(response.headers).to.have.property('cache-control', 'no-cache');
+            });
+            it('And subsequent requests to the same endpoint are cache misses', async () => {
+                const secondResponse = await axios.get('http://localhost:3000/no-cache');
+                expect(secondResponse.headers).to.have.property('x-cache-result', 'miss');
+            });
+        });
+
         describe('When I invalidate the CDN Server with the path"*"', () => {
             let response;
             before('invalidate and request', async () => {
@@ -54,6 +75,27 @@ describe('Scenario: I can use a server as a cdn like cloudfront', () => {
             });
             it('And the cache missed', () => {
                 expect(response.headers).to.have.property('x-cache-result', 'miss');
+            });
+        });
+
+        const nonCachedMethods = ['delete', 'post', 'put', 'patch'];
+        nonCachedMethods.forEach((method) => {
+            describe(`When I make a ${method} request`, () => {
+                let response;
+                before('make the request', async () => {
+                    response = await axios[method]('http://localhost:3000');
+                });
+                it('Then my request is forwarded to the hello world server', () => {
+                    expect(response).to.have.property('status', 200);
+                    expect(response).to.have.property('data', 'hello world');
+                });
+                it('And the cache missed', () => {
+                    expect(response.headers).to.have.property('x-cache-result', 'miss');
+                });
+                it('And subsequent requests to the same endpoint are cache misses', async () => {
+                    const secondResponse = await axios[method]('http://localhost:3000');
+                    expect(secondResponse.headers).to.have.property('x-cache-result', 'miss');
+                });
             });
         });
 

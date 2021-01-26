@@ -22,5 +22,13 @@ describe('Scenario: I can use the hello world server in tests', () => {
                 expect(response).to.have.property('data', 'hello world');
             });
         });
+        describe('When I make a request to the hello world server at the "/no-cache" path', () => {
+            it('Then I get back the hello world response, with the no-cache header', async () => {
+                const response = await axios.get('http://localhost:4000/no-cache');
+                expect(response).to.have.property('status', 200);
+                expect(response).to.have.property('data', 'hello world');
+                expect(response.headers).to.have.property('cache-control', 'no-cache');
+            });
+        });
     });
 });
