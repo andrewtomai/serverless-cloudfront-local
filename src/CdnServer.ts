@@ -30,11 +30,17 @@ class CdnServer {
                 const { method, url, key, ttl } = Behavior.requestParameters(destination, req);
                 const makeRequest = () => axios({ method, url, validateStatus: null });
                 // make the request, using the cache to check for previous answers
-                const { cache, response, updated } = await Cache.memoize(makeRequest, this.cache, key, ttl);
+                const { cache, response, responseWasCached } = await Cache.memoize(
+                    makeRequest,
+                    this.cache,
+                    key,
+                    method,
+                    ttl,
+                );
                 // update the cache with any new values
                 this.cache = cache;
                 // send the response
-                res.set('x-cache-result', updated ? 'miss' : 'hit');
+                res.set('x-cache-result', responseWasCached ? 'hit' : 'miss');
                 res.set(response.headers).status(response.status).send(response.data);
             } catch (err) {
                 res.send(err);

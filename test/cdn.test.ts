@@ -42,6 +42,24 @@ describe('Scenario: I can use a server as a cdn like cloudfront', () => {
             });
         });
 
+        describe('When I make a POST request', () => {
+            let response;
+            before('make the request', async () => {
+                response = await axios.post('http://localhost:3000/');
+            });
+            it('Then my request is forwarded to the hello world server', () => {
+                expect(response).to.have.property('status', 200);
+                expect(response).to.have.property('data', 'hello world');
+            });
+            it('And the cache missed', () => {
+                expect(response.headers).to.have.property('x-cache-result', 'miss');
+            });
+            it('And subsequent requests to the same endpoint are cache misses', async () => {
+                const secondResponse = await axios.post('http://localhost:3000/');
+                expect(secondResponse.headers).to.have.property('x-cache-result', 'miss');
+            });
+        });
+
         describe('When I make a request to the CDN server to the "/no-cache" path', () => {
             let response;
             before('make the request', async () => {
