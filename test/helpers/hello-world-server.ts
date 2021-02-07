@@ -6,6 +6,9 @@ class HelloWorldServer {
 
     constructor(port = 4000) {
         const app = express();
+        app.get('/no-cache', (req, res) => {
+            res.header('Cache-Control', 'no-cache').send('hello world');
+        });
         app.all('*', (req, res) => {
             res.send('hello world');
         });

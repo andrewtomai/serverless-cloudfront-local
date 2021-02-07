@@ -12,7 +12,7 @@ describe('Scenario: Using cache helpers', () => {
         });
     });
 
-    describe('Given: a cache, and a function to memoize with the cache', () => {
+    describe.only('Given: a cache, and a function to memoize with the cache', () => {
         const cache = {
             key: {
                 timeRetrieved: Date.now(),
@@ -22,25 +22,75 @@ describe('Scenario: Using cache helpers', () => {
         const fnToMemoize = async () => ('new value' as unknown) as AxiosResponse;
         describe('When the cached value is not expired', () => {
             it('Then I back the cached value', async () => {
-                const { updated, cache: updatedCache, response } = await Cache.memoize(fnToMemoize, cache, 'key', 100);
-                expect(updated).to.equal(false, 'The cache has been incorrectly updated');
+                const { responseWasCached, cache: updatedCache, response } = await Cache.memoize(
+                    fnToMemoize,
+                    cache,
+                    'key',
+                    'GET',
+                    100,
+                );
+                expect(responseWasCached).to.equal(true, 'The response should be cached.');
                 expect(updatedCache).to.deep.equal(cache, 'The cache has been incorrectly updated');
                 expect(response).to.equal('value', 'Did not get back the cached value');
             });
         });
         describe('When the cached value is expired', () => {
             it('Then I get back a new value and the cache it is updated', async () => {
-                const { updated, cache: updatedCache, response } = await Cache.memoize(fnToMemoize, cache, 'key', 0);
-                expect(updated).to.equal(true, 'The cache has not been updated');
+                const { responseWasCached, cache: updatedCache, response } = await Cache.memoize(
+                    fnToMemoize,
+                    cache,
+                    'key',
+                    'GET',
+                    0,
+                );
+                expect(responseWasCached).to.equal(false, 'The response should not be cached');
                 expect(updatedCache).to.not.deep.equal(cache, 'The cache has not been updated');
                 expect(response).to.equal('new value', 'Did not get back the new value');
             });
         });
         describe('When the cached value is missing', () => {
             it('Then I get back a new value and the cache it is updated', async () => {
-                const { updated, cache: updatedCache, response } = await Cache.memoize(fnToMemoize, cache, 'key2', 0);
-                expect(updated).to.equal(true, 'The cache has not been updated');
+                const { responseWasCached, cache: updatedCache, response } = await Cache.memoize(
+                    fnToMemoize,
+                    cache,
+                    'key2',
+                    'GET',
+                    0,
+                );
+                expect(responseWasCached).to.equal(false, 'Response should not be cached');
                 expect(updatedCache).to.deep.include(cache, 'The cache is missing the other cached value');
+                expect(response).to.equal('new value', 'Did not get back the new value');
+            });
+        });
+        describe('When the function to memoize returns the "no-cache" header', async () => {
+            const noCacheFn = async () => (({ headers: { 'cache-control': 'no-cache' } } as unknown) as AxiosResponse);
+            it('Then I get back my expected value, and the cache was not updated', async () => {
+                const { responseWasCached, cache: updatedCache, response } = await Cache.memoize(
+                    noCacheFn,
+                    cache,
+                    'no-cache-key',
+                    'GET',
+                    500,
+                );
+                expect(responseWasCached).to.equal(false, 'Response should not be cached');
+                expect(updatedCache).to.deep.include(cache, 'The cache should not be updated');
+                expect(response).to.deep.equal(
+                    { headers: { 'cache-control': 'no-cache' } },
+                    'Did not get back the new value',
+                );
+            });
+        });
+        describe('When the http method is not GET, HEAD, or OPTIONS', async () => {
+            it('Then I get back my expected value, and the cache was not updated', async () => {
+                const { responseWasCached, cache: updatedCache, response } = await Cache.memoize(
+                    fnToMemoize,
+                    cache,
+                    'no-cache-key',
+                    'POST',
+                    500,
+                );
+                expect(responseWasCached).to.equal(false, 'Response should not be cached');
+                expect(updatedCache).to.deep.include(cache, 'The cache should not be updated');
                 expect(response).to.equal('new value', 'Did not get back the new value');
             });
         });
